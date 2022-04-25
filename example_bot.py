@@ -6,7 +6,7 @@ from discord.ext import commands
 from discord.ext.commands import CommandNotFound
 
 client = commands.Bot(command_prefix = '!')
-cmdList = {}
+client.cmdList = {}
 
 @client.event
 async def on_ready():
@@ -14,56 +14,59 @@ async def on_ready():
     #Load command list
     with open("usrcmd.json", "r") as f:
         try:
-            global cmdList
-            cmdList = json.load(f)
+            client.cmdList = json.load(f)
         except json.JSONDecodeError:
             pass
 
+#Configure a new command from the chat input
+@client.command(name='addcom')
+async def addcom(ctx, arg1, arg2):
+    input = [arg1, arg2]
+    #Update with new entry
+    client.cmdList[input[0]] = input[1]
+    updateCmds()
+
+    await ctx.send('Added command: {}, {}'.format(arg1, arg2))
+
+#Delete existing command
+@client.command(name='delcom')
+async def delcom(ctx, arg1):
+    if arg1.lower() in client.cmdList.keys():
+        del client.cmdList[arg1]
+        updateCmds()
+    else:
+        await ctx.send('Command not found')
+
+#Updates command list file
+def updateCmds():
+    with open("usrcmd.json","w") as f:
+        json.dump(client.cmdList,f)
+
+#Command not found error handling--ignores error if "command" is user command dictionary item
+@client.event
+async def on_command_error(ctx, error):
+    if isinstance(error, CommandNotFound ):
+        if ctx.message.content in client.cmdList:
+            pass
+        else:
+            await ctx.send("Invalid command!")
+            return
+
+#Standard on_message event checker
+#TODO: Add functionality to tag users via %user% flag in command
 @client.event
 async def on_message(message):
-    
+    client.cmdList
     if message.author == client.user:
         return
     
     #Check against commandlist dictionary
     msgWords = message.content.lower().split(' ')
     for word in msgWords:
-        if word in cmdList.keys():
-            await message.channel.send(cmdList[word])
+        if word in client.cmdList.keys():
+            await message.channel.send(client.cmdList[word])
             break
 
     await client.process_commands(message)
-
-#Configure a new command from the chat input
-@client.command(name='addcom')
-async def addcom(ctx, arg1, arg2):
-    input = [arg1, arg2]
-    global cmdList
-    #Create dictionary from file
-    with open("usrcmd.json", "r") as f:
-        try:
-            cmdList = json.load(f)
-        except json.JSONDecodeError:
-            pass
-
-    #Update with new entry
-    cmdList[input[0]] = input[1]
-
-    #Save new entry to file
-    with open("usrcmd.json", "w") as f:
-        json.dump(cmdList, f)
-
-    await ctx.send('Added command: {}, {}'.format(arg1, arg2))
-
-#Command not found error handling--ignores error if "command" is user command dictionary item
-@client.event
-async def on_command_error(ctx, error):
-    global cmdList
-    if isinstance(error, CommandNotFound ):
-        if ctx.message.content in cmdList:
-            pass
-        else:
-            await ctx.send("Invalid command!")
-            return
     
-client.run('')
+client.run('OTY1NzA5MTA0NDE0ODc1NzI5.Yl3IsA.cHuQ8iOFtr5dASIXgdArh-lDZJk')
